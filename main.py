@@ -31,12 +31,14 @@ def audio_play():
         paused = False
         start_time = time.time()
         update_time_label()
+        update_seek_slider()
         threading.Thread(target=monitor_music, daemon=True).start()
     elif paused:
         music.unpause()
         paused = False
         start_time += time.time() - pause_start_time
         update_time_label()
+        update_seek_slider()
     update_button()
 
 def audio_pause():
@@ -68,6 +70,7 @@ def open_file():
     global file, total_time, audio, file_name
     if file:
         audio_unload()
+        destroy_seek_slider()
     
     file = filedialog.askopenfilename(
         title="Open file",
@@ -124,14 +127,17 @@ def update_metadata_label():
         cover_label.config(image='')
 
 def update_button():
-    global gif
+    global gif, seek_slider
     if file:
         if playing and not gif:
             cat_jam()
+        if playing and not seek_slider:
+            create_seek_slider()
         play_button.config(state=NORMAL)
         if paused or not playing:
             play_button.config(text="Play", command=audio_play)
             stop_button.config(state=DISABLED)
+            create_seek_slider()
             if gif:
                 gif.stop()
                 gif = None
@@ -140,12 +146,15 @@ def update_button():
             stop_button.config(state=NORMAL)
             if not gif:
                 cat_jam()
+            create_seek_slider()
     else:
         play_button.config(state=DISABLED)
         stop_button.config(state=DISABLED)
         if gif:
             gif.stop()
             gif = None
+        if seek_slider:
+            destroy_seek_slider()
 
 def update_time_label():
     global play_time, start_time, total_time
@@ -169,6 +178,14 @@ def update_volume_label():
     volume_value = volume_slider.get()
     volume_label.config(text=f"{int(volume_value)}%")
 
+def update_seek_slider():
+    global seek_slider, start_time, total_time, file, music
+    if file and playing and not paused:
+        elapsed_time = time.time() - start_time
+        position = (elapsed_time / total_time) * 100
+        seek_slider.set(position)
+    root.after(1000, update_seek_slider)
+
 def monitor_music():
     global playing
     while playing and not paused:
@@ -183,8 +200,32 @@ def set_volume(value):
         music.set_volume(volume)
     update_volume_label()
 
+def set_position(value):
+    global music, file, start_time
+    if file:
+        position = float(value) / 100
+        target_time = position * total_time
+        start_time = time.time() - target_time  # Пересчитываем время начала воспроизведения
+        if playing:
+            music.set_pos(target_time)
+        update_time_label()
+
+def create_seek_slider():
+    global seek_slider, playing, paused
+    if not seek_slider:
+        seek_slider = ttk.Scale(main_frame, from_=0, to=100, orient='horizontal', command=set_position)
+        seek_slider.pack(fill=X, padx=5, expand=True)
+    if seek_slider and not paused and not playing:
+        seek_slider.set(0)
+
+def destroy_seek_slider():
+    global seek_slider
+    if seek_slider:
+        seek_slider.destroy()
+        seek_slider = None
+
 def interface():
-    global play_button, stop_button, time_label, root, volume_slider, volume_label, title_label, artist_label, cover_label, cat_frame, gif
+    global play_button, stop_button, time_label, root, volume_slider, volume_label, title_label, artist_label, cover_label, cat_frame, gif, seek_slider, main_frame
 
     root = Tk()
     root.title("Audio Player")
@@ -196,6 +237,7 @@ def interface():
     style.configure('TButton', background='#4a6fa5', foreground='black')
     style.configure('TLabel', background='#2e3f4f', foreground='white', font=('Helvetica', 10, 'bold'))
     style.configure('Vertical.TScale', background='#2e3f4f')
+    style.configure('Horizontal.TScale', background='#2e3f4f')
 
     main_frame = ttk.Frame(root, padding=20)
     main_frame.pack(expand=True, fill=BOTH)
@@ -239,6 +281,7 @@ def interface():
     cat_frame = ttk.Frame(root, padding=5)
     cat_frame.place(x=500, y=0, anchor=NE)
 
+    seek_slider = None
     gif = None
     update_button()
     root.mainloop()
