@@ -166,7 +166,7 @@ def main(page: ft.Page):
     dlg_info = ft.AlertDialog(
         modal=False,
         title=ft.Text("О Audio Player"),
-        content=ft.Text("Audio Player 3.0.1 - 30.07.2024\nby seriouslych")
+        content=ft.Text("Audio Player 3.0.2 - 30.07.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
     )
 
     slider = ft.Slider(
