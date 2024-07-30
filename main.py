@@ -146,6 +146,11 @@ def main(page: ft.Page):
             page.window_destroy()
         else:
             page.update()
+            
+    def info(e):
+        e.control.page.dialog = dlg_info
+        dlg_info.open = True
+        e.control.page.update()
 
     dlg_modal = ft.AlertDialog(
         modal=True,
@@ -156,6 +161,12 @@ def main(page: ft.Page):
             ft.TextButton("Нет", on_click=handle_close),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
+    )
+    
+    dlg_info = ft.AlertDialog(
+        modal=False,
+        title=ft.Text("О Audio Player"),
+        content=ft.Text("Audio Player 3.0.1 - 30.07.2024\nby seriouslych")
     )
 
     slider = ft.Slider(
@@ -216,6 +227,7 @@ def main(page: ft.Page):
             )),
             ft.PopupMenuButton(
                 items=[
+                    ft.PopupMenuItem(text="О программе...", on_click=info),
                     ft.PopupMenuItem(
                         text="Выход", on_click=open_dlg
                     ),
