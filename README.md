@@ -1,3 +1,5 @@
-# audio-player
+# Audio-Player 3.0
 
-### плеер говна
+## Переписан полностью на Flet
+
+![alt text](assets/screenshot.png)

@@ -1,262 +1,238 @@
-import os
-import pygame
-import time
-import threading
+import flet as ft
 
-# Интерфейс
-from tkinter import *
-from tkinter import ttk, filedialog
-from PIL import Image, ImageTk
-from gif import AnimatedGIF
+from utils import milliseconds_to_time, extract_album_cover, get_filename, get_metadata
 
-# Метаданные
-from mutagen.mp3 import MP3
-from mutagen.easyid3 import EasyID3
-from io import BytesIO
-import eyed3
+def main(page: ft.Page):
+    global playing, paused, src, file, duration, formatted_duration, formatted_time, audio1, released
 
-def audio_load():
-    global music
-    if file:
-        mixer = pygame.mixer
-        mixer.init()
-        music = mixer.music
-        music.load(file)
+    page.title = "Audio Player"
 
-def audio_play():
-    global playing, music, paused, start_time, pause_start_time
-    if file and not playing:
-        music.play()
-        playing = True
-        paused = False
-        start_time = time.time()
-        update_time_label()
-        threading.Thread(target=monitor_music, daemon=True).start()
-    elif paused:
-        music.unpause()
-        paused = False
-        start_time += time.time() - pause_start_time
-        update_time_label()
-    update_button()
-
-def audio_pause():
-    global playing, music, paused, pause_start_time
-    if playing:
-        music.pause()
-        paused = True
-        pause_start_time = time.time()
-        update_button()
-
-def audio_stop():
-    global playing, music, paused
-    if playing:
-        music.stop()
-        playing = False
-        paused = False
-        update_button()
+    src = ''
     
-def audio_unload():
-    global music, file
-    audio_stop()
-    music.unload()
-    file = None
-    start_time = 0
-    update_time_label()
-    update_metadata_label()
-
-def open_file():
-    global file, total_time, audio, file_name
-    if file:
-        audio_unload()
+    playing = False
+    paused = False
+    released = False
+    file = False
     
-    file = filedialog.askopenfilename(
-        title="Open file",
-        filetypes=(("MP3 Files", "*.mp3"), ("All Files", "*.*"))
-    )
+    audio1 = None
     
-    if file:
-        file_name = os.path.splitext(os.path.basename(file))[0]
-        audio = MP3(file, ID3=EasyID3)
-        total_time = audio.info.length
-        audio_load()
-        extract_album_cover()
-        update_button()
-        update_time_label()
-        update_metadata_label()
+    duration = 0
+    formatted_duration = "00:00"
+    formatted_time = "00:00"
 
-def cat_jam():
-    global gif
-    if not gif:
-        gif = AnimatedGIF(cat_frame, GIF_PATH)
+    def open_file(e: ft.FilePickerResultEvent):
+        global src, file, audio1, paused, playing, released
+        if e.files:
+            src = e.files[0].path
+            
+            file = True
+            
+            filename = get_filename(src)
+            title = get_metadata(src, 'title', filename)
+            artist = get_metadata(src, 'artist', 'Неизвестно')
+            
+            if audio1 is None:
+                audio1 = ft.Audio(
+                    src=src,
+                    autoplay=False,
+                    volume=0.5,
+                    balance=0,
+                    on_loaded=lambda _: print("Loaded"),
+                    on_duration_changed=on_duration_changed,
+                    on_position_changed=on_position_changed,
+                    on_state_changed=lambda e: print("State changed:", e.data),
+                    on_seek_complete=lambda _: print("Seek complete"),
+                )
+                page.overlay.append(audio1)
+                page.update()
+            else:
+                audio1.src = src
 
-def extract_album_cover():
-    global file, cover_image
-    if file:
-        audiofile = eyed3.load(file)
-        if audiofile.tag is None or not audiofile.tag.images:
-            cover_image = None
-            return
-        
-        image_data = audiofile.tag.images[0].image_data
-        image = Image.open(BytesIO(image_data))
-        image.thumbnail((100, 100))
-        cover_image = ImageTk.PhotoImage(image)
+            image_path = extract_album_cover(src)
 
-def get_metadata(tag, default_value):
-    global audio
-    return audio.get(tag, [default_value])[0]
+            if image_path:
+                cover.content = ft.Image(src=image_path)
+            else:
+                cover.content = ft.Icon(name=ft.icons.AUDIO_FILE)
+                
+            song_metadata.controls[0].value = artist
+            song_metadata.controls[2].value = title
+            cover.update()
+            song_metadata.update()
+            audio1.update()
 
-def update_metadata_label():
-    global title_label, artist_label, cover_image
-    if file:
-        title = get_metadata('title', file_name)
-        artist = get_metadata('artist', '')
-        
-        title_label.config(text=title)
-        artist_label.config(text=artist)
-        if cover_image:
-            cover_label.config(image=cover_image)
+            # Reset play/pause state
+            playing = False
+            paused = False
+            playback_button.icon = ft.icons.PLAY_ARROW
+            playback_button.on_click = audio_play
+            playback_button.update()
+
+    def audio_play(e):
+        global playing, paused
+        if not playing and not paused and file:
+            audio1.play()
+            playing = True
+            playback_button.icon = ft.icons.PAUSE
+            playback_button.on_click = audio_pause
+            playback_button.update()
+
+    def audio_pause(e):
+        global playing, paused
+        if playing and not paused:
+            audio1.pause()
+            playing = False
+            paused = True
+            playback_button.icon = ft.icons.PLAY_ARROW
+            playback_button.on_click = audio_resume
+            playback_button.update()
+
+    def audio_resume(e):
+        global playing, paused
+        if not playing and paused:
+            audio1.resume()
+            playing = True
+            paused = False
+            playback_button.icon = ft.icons.PAUSE
+            playback_button.on_click = audio_pause
+            playback_button.update()
+
+    def slider_changed(e):
+        volume = e.control.value / 100
+        audio1.volume = volume
+        audio1.update()
+
+    def on_position_changed(e):
+        global formatted_time
+        current_position = int(e.data)
+        formatted_time = milliseconds_to_time(current_position)
+        print(f"Current position: {formatted_time}/{formatted_duration}")
+        position = (current_position / duration) * 100
+        update_time_label(formatted_time, formatted_duration)
+        update_seek_slider(position)
+
+    def on_duration_changed(e):
+        global duration, formatted_duration
+        duration = int(e.data)
+        formatted_duration = milliseconds_to_time(duration)
+        print("Current duration:", formatted_duration)
+
+    def update_seek_slider(value):
+        slider.value = value
+        slider.update()
+
+    def set_audio_position(e):
+        global duration
+        position = (e.control.value / 100) * duration
+        int_position = int(position)
+        print(f"Setting position to: {int_position} ms")
+        audio1.seek(int_position)
+        audio1.update()
+
+    def update_time_label(f_pos, f_dur):
+        t1.value = f_pos
+        t2.value = f_dur
+        t1.update()
+        t2.update()
+
+    def open_dlg(e):
+        e.control.page.dialog = dlg_modal
+        dlg_modal.open = True
+        e.control.page.update()
+
+    def handle_close(e):
+        dlg_modal.open = False
+        if e.control.text == "Да":
+            page.window_destroy()
         else:
-            cover_label.config(image='')
-    else:
-        title_label.config(text='')
-        artist_label.config(text='')
-        cover_label.config(image='')
+            page.update()
 
-def update_button():
-    global gif
-    if file:
-        if playing and not gif:
-            cat_jam()
-        play_button.config(state=NORMAL)
-        if paused or not playing:
-            play_button.config(text="Play", command=audio_play)
-            stop_button.config(state=DISABLED)
-            if gif:
-                gif.stop()
-                gif = None
-        elif playing:
-            play_button.config(text="Pause", command=audio_pause)
-            stop_button.config(state=NORMAL)
-            if not gif:
-                cat_jam()
-    else:
-        play_button.config(state=DISABLED)
-        stop_button.config(state=DISABLED)
-        if gif:
-            gif.stop()
-            gif = None
+    dlg_modal = ft.AlertDialog(
+        modal=True,
+        title=ft.Text("Выход"),
+        content=ft.Text("Вы точно хотите выйти?"),
+        actions=[
+            ft.TextButton("Да", on_click=handle_close),
+            ft.TextButton("Нет", on_click=handle_close),
+        ],
+        actions_alignment=ft.MainAxisAlignment.END,
+    )
 
-def update_time_label():
-    global play_time, start_time, total_time
-    if file and playing and not paused:
-        elapsed_time = time.time() - start_time
-        minutes, seconds = divmod(elapsed_time, 60)
-        play_time = f"{int(minutes):02}:{int(seconds):02}"
-        total_minutes, total_seconds = divmod(total_time, 60)
-        total_time_formatted = f"{int(total_minutes):02}:{int(total_seconds):02}"
-        time_label.config(text=f"{play_time}/{total_time_formatted}")
-        root.after(1000, update_time_label)
-    elif file and not playing:
-        total_minutes, total_seconds = divmod(total_time, 60)
-        total_time_formatted = f"{int(total_minutes):02}:{int(total_seconds):02}"
-        time_label.config(text=f"00:00/{total_time_formatted}")
-    elif not file and not paused:
-        time_label.config(text="")
+    slider = ft.Slider(
+        min=0, max=100, on_change=set_audio_position, expand=True
+    )
 
-def update_volume_label():
-    global volume_slider, volume_label
-    volume_value = volume_slider.get()
-    volume_label.config(text=f"{int(volume_value)}%")
+    volume_slider = ft.Slider(
+        min=0, max=100, divisions=20, label="{value}%", on_change=slider_changed, width=350, value=50
+    )
 
-def monitor_music():
-    global playing
-    while playing and not paused:
-        if not music.get_busy():
-            audio_unload()
-        time.sleep(1)
+    playback_button = ft.IconButton(
+        icon=ft.icons.PLAY_ARROW, icon_size=40, on_click=audio_play
+    )
 
-def set_volume(value):
-    global music, file
-    volume = float(value) / 100
-    if file:
-        music.set_volume(volume)
-    update_volume_label()
+    t1 = ft.Text()
+    t2 = ft.Text()
 
-def interface():
-    global play_button, stop_button, time_label, root, volume_slider, volume_label, title_label, artist_label, cover_label, cat_frame, gif
+    file_picker = ft.FilePicker(on_result=open_file)
 
-    root = Tk()
-    root.title("Audio Player")
-    root.geometry("500x400")
-    root.resizable(False, False)
+    cover = ft.Container(
+        content=ft.Icon(name=ft.icons.AUDIO_FILE),
+        margin=10,
+        alignment=ft.alignment.center,
+        bgcolor=ft.colors.BLACK,
+        width=250,
+        height=250,
+        border_radius=10,
+    )
 
-    style = ttk.Style(root)
-    style.configure('TFrame', background='#2e3f4f')
-    style.configure('TButton', background='#4a6fa5', foreground='black')
-    style.configure('TLabel', background='#2e3f4f', foreground='white', font=('Helvetica', 10, 'bold'))
-    style.configure('Vertical.TScale', background='#2e3f4f')
+    song_metadata = ft.Row(
+        [
+            ft.Text(value="Неизвестно", size=20), ft.Text(value="-", size=20), ft.Text(value="Неизвестно", size=20)
+        ],
+        alignment=ft.MainAxisAlignment.CENTER
+    )
 
-    main_frame = ttk.Frame(root, padding=20)
-    main_frame.pack(expand=True, fill=BOTH)
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    button_frame = ttk.Frame(main_frame, padding=10)
-    button_frame.pack(side=TOP, anchor=W, fill=X)
+    page.bottom_appbar = ft.BottomAppBar(
+        content=ft.Row(
+            [
+                t1, slider, t2, ft.Divider(height=10, color="white"), ft.Icon(name=ft.icons.SPEAKER), volume_slider
+            ],
+            alignment=ft.MainAxisAlignment.CENTER
+        )
+    )
 
-    ttk.Button(button_frame, text="Open File", command=open_file).pack(side=LEFT, padx=5)
+    page.appbar = ft.AppBar(
+        leading=ft.Icon(ft.icons.AUDIOTRACK),
+        leading_width=40,
+        title=ft.Text("Audio Player"),
+        center_title=True,
+        bgcolor=ft.colors.PURPLE,
+        actions=[
+            ft.IconButton(ft.icons.FILE_OPEN, on_click=lambda _: file_picker.pick_files(
+                allow_multiple=False, file_type=ft.FilePickerFileType.AUDIO
+            )),
+            ft.PopupMenuButton(
+                items=[
+                    ft.PopupMenuItem(
+                        text="Выход", on_click=open_dlg
+                    ),
+                ]
+            ),
+        ],
+    )
 
-    play_button = ttk.Button(button_frame, text="Play", command=audio_play, state=DISABLED)
-    play_button.pack(side=LEFT, padx=5)
+    page.overlay.append(file_picker)
+    page.add(
+        cover,
+        song_metadata,
+        ft.Container(
+            content=playback_button,
+            width=100,
+            height=60
+        )
+    )
 
-    stop_button = ttk.Button(button_frame, text="Stop", command=audio_stop, state=DISABLED)
-    stop_button.pack(side=LEFT, padx=5)
-
-    info_frame = ttk.Frame(main_frame, padding=0)
-    info_frame.pack(side=TOP, anchor=W, fill=X)
-
-    cover_label = ttk.Label(info_frame, image=None)
-    cover_label.pack(anchor=W, pady=(0, 5))
-
-    title_label = ttk.Label(info_frame, text="")
-    title_label.pack(anchor=W, pady=(0, 5))
-
-    artist_label = ttk.Label(info_frame, text="")
-    artist_label.pack(anchor=W, pady=(0, 10))
-
-    time_label = ttk.Label(info_frame, text="")
-    time_label.pack(anchor=W, pady=(0, 5))
-
-    volume_frame = ttk.Frame(main_frame, padding=5)
-    volume_frame.pack(side=RIGHT, anchor=N, fill=Y)
-
-    volume_label = ttk.Label(volume_frame, text="100%")
-    volume_label.pack(anchor=N, pady=(0, 5))
-
-    volume_slider = ttk.Scale(volume_frame, from_=100, to=0, orient='vertical', command=set_volume)
-    volume_slider.set(100)
-    volume_slider.pack(anchor=N, pady=(0, 10))
-
-    cat_frame = ttk.Frame(root, padding=5)
-    cat_frame.place(x=500, y=0, anchor=NE)
-
-    gif = None
-    update_button()
-    root.mainloop()
-
-file = None
-music = None
-cover_image = None
-frames = None
-
-playing = False
-paused = False
-
-play_time = "00:00"
-start_time = 0
-pause_start_time = 0
-total_time = 0
-frame_idx = 0
-
-GIF_PATH = 'catjam.gif'
-
-interface()
+ft.app(target=main)
