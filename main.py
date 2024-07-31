@@ -1,6 +1,7 @@
 import flet as ft
 
 from utils import milliseconds_to_time, extract_album_cover, get_filename, get_metadata
+import rpc
 
 def main(page: ft.Page):
     global playing, paused, src, file, duration, formatted_duration, formatted_time, audio1, released
@@ -8,25 +9,20 @@ def main(page: ft.Page):
     page.title = "Audio Player"
 
     src = ''
-    
     playing = False
     paused = False
     released = False
     file = False
-    
     audio1 = None
-    
     duration = 0
     formatted_duration = "00:00"
     formatted_time = "00:00"
 
     def open_file(e: ft.FilePickerResultEvent):
-        global src, file, audio1, paused, playing, released
+        global src, file, audio1, paused, playing, released, title, artist, image_path
         if e.files:
             src = e.files[0].path
-            
             file = True
-            
             filename = get_filename(src)
             title = get_metadata(src, 'title', filename)
             artist = get_metadata(src, 'artist', 'Неизвестно')
@@ -49,11 +45,12 @@ def main(page: ft.Page):
                 audio1.src = src
 
             image_path = extract_album_cover(src)
-
             if image_path:
                 cover.content = ft.Image(src=image_path)
             else:
                 cover.content = ft.Icon(name=ft.icons.AUDIO_FILE)
+                
+            image_name = 'sou'
                 
             song_metadata.controls[0].value = artist
             song_metadata.controls[2].value = title
@@ -61,15 +58,16 @@ def main(page: ft.Page):
             song_metadata.update()
             audio1.update()
 
-            # Reset play/pause state
             playing = False
             paused = False
             playback_button.icon = ft.icons.PLAY_ARROW
             playback_button.on_click = audio_play
             playback_button.update()
+            
+            rpc.update_discord_rpc(title, artist, image_name)
 
     def audio_play(e):
-        global playing, paused
+        global playing, paused, title, artist
         if not playing and not paused and file:
             audio1.play()
             playing = True
@@ -103,10 +101,9 @@ def main(page: ft.Page):
         audio1.update()
 
     def on_position_changed(e):
-        global formatted_time
+        global formatted_time, formatted_duration, discord_rpc
         current_position = int(e.data)
         formatted_time = milliseconds_to_time(current_position)
-        print(f"Current position: {formatted_time}/{formatted_duration}")
         position = (current_position / duration) * 100
         update_time_label(formatted_time, formatted_duration)
         update_seek_slider(position)
@@ -166,7 +163,7 @@ def main(page: ft.Page):
     dlg_info = ft.AlertDialog(
         modal=False,
         title=ft.Text("О Audio Player"),
-        content=ft.Text("Audio Player 3.0.2 - 30.07.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
+        content=ft.Text("Audio Player 3.1.0 - 31.07.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
     )
 
     slider = ft.Slider(
