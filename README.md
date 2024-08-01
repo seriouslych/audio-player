@@ -5,3 +5,5 @@
 ## Functions:
 - Play tracks
 - Scan a directory for music files and then play them
+
+### Discord RPC by ![EpitaphNewell](https://github.com/EpitaphNewell)
