@@ -2,3 +2,5 @@ flet
 eyed3
 mutagen
 pillow
+pypresence
+numpy

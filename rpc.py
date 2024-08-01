@@ -11,7 +11,11 @@ class DiscordRPC:
 
     def connect(self):
         if not self.connected:
-            self.rpc.connect()
+            try:
+                self.rpc.connect()
+            except Exception:
+                self.connected = False
+            
             self.connected = True
 
     def update(self, state, large_image, large_text, start):

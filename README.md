@@ -1,5 +1,7 @@
-# Audio-Player 3.0.1
+# Audio-Player 4.0.0 [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff)](#)
 
-## Переписан полностью на Flet
+## Powered by Flet framework ![alt text](assets/screenshot.png)
 
-![alt text](assets/screenshot.png)
+## Functions:
+- Play tracks
+- Scan a directory for music files and then play them
