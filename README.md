@@ -32,3 +32,11 @@
   </ul>
 </details>
 
+<details>
+  <summary>License</summary>
+  <ul>
+  MIT License
+  Copyright (c) 2024 Alexander Seriously
+  </ul>
+</details>
+
