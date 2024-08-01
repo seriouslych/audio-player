@@ -2,7 +2,7 @@
   <img src="https://i.ibb.co/CvSzJS1/21.png" width="600" height="169" alt="AOC2 Publisher" />
 </p>
 <p align="center">
-  <img src="https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white" alt="Flutter"/>
+  <img src="https://img.shields.io/badge/Flutter-%2302569B.svg?&logo=Flutter&logoColor=white" alt="Flutter"/>
   <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff" alt="Python"/>
 </p>
 <hr>
