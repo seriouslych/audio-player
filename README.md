@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://i.ibb.co/CvSzJS1/21.png" width="600" height="169" alt="AOC2 Publisher" />
+  <img src="https://raw.githubusercontent.com/seriouslych/audio-player/main/assets/audio-player%20logo.png" width="520" height="400" alt="AOC2 Publisher" />
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-%2302569B.svg?&logo=Flutter&logoColor=white" alt="Flutter"/>
