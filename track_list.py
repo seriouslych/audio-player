@@ -47,14 +47,14 @@ class trackList:
 
 def tracks(page: ft.Page, track_queue, color, change_track_by_index):
     def open_dlg(e):
-        e.control.page.dialog = dlg_modal
+        page.overlay.append(dlg_modal)
         dlg_modal.open = True
-        e.control.page.update()
+        page.update()
 
     def handle_close(e):
         dlg_modal.open = False
-        if e.control.text == "Да":
-            page.window_destroy()
+        if e.control.text == "Yes":
+            page.window.destroy()
         else:
             page.update()
 
@@ -77,9 +77,9 @@ def tracks(page: ft.Page, track_queue, color, change_track_by_index):
         close_drawer()
 
     def info(e):
-        e.control.page.dialog = dlg_info
+        page.overlay.append(dlg_info)
         dlg_info.open = True
-        e.control.page.update()
+        page.update()
 
     def track_load(e, index):
         page.go("/")
@@ -87,19 +87,19 @@ def tracks(page: ft.Page, track_queue, color, change_track_by_index):
 
     dlg_modal = ft.AlertDialog(
         modal=True,
-        title=ft.Text("Выход"),
-        content=ft.Text("Вы точно хотите выйти?"),
+        title=ft.Text("Exit"),
+        content=ft.Text("Are you sure you want to exit?"),
         actions=[
-            ft.TextButton("Да", on_click=handle_close),
-            ft.TextButton("Нет", on_click=handle_close),
+            ft.TextButton("Yes", on_click=handle_close),
+            ft.TextButton("No", on_click=handle_close),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
 
     dlg_info = ft.AlertDialog(
         modal=False,
-        title=ft.Text("О Audio Player"),
-        content=ft.Text("Audio Player 4.0.0 - 31.07.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
+        title=ft.Text("About Audio Player"),
+        content=ft.Text("Audio Player 4.1.1 - 04.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
     )
 
     drawer = ft.NavigationDrawer(
@@ -109,16 +109,16 @@ def tracks(page: ft.Page, track_queue, color, change_track_by_index):
         controls=[
             ft.NavigationDrawerDestination(
                 icon=ft.icons.PLAY_ARROW,
-                label="Сейчас играет",
+                label="Now Playing",
             ),
             ft.NavigationDrawerDestination(
                 icon_content=ft.Icon(ft.icons.MUSIC_NOTE),
-                label="Треки",
+                label="Track List",
             ),
             ft.Divider(thickness=2),
             ft.NavigationDrawerDestination(
                 icon=ft.icons.SETTINGS,
-                label="Настройки"
+                label="Settings"
             ),
         ],
     )
@@ -132,9 +132,9 @@ def tracks(page: ft.Page, track_queue, color, change_track_by_index):
         actions=[
             ft.PopupMenuButton(
                 items=[
-                    ft.PopupMenuItem(text="О программе...", on_click=info),
+                    ft.PopupMenuItem(text="About...", on_click=info),
                     ft.PopupMenuItem(
-                        text="Выход", on_click=open_dlg
+                        text="Exit", on_click=open_dlg
                     ),
                 ]
             ),
@@ -147,7 +147,7 @@ def tracks(page: ft.Page, track_queue, color, change_track_by_index):
     track_controls = []
     for index, track in enumerate(track_queue):
         title = get_metadata(track, 'title', get_filename(track))
-        artist = get_metadata(track, 'artist', 'Неизвестно')
+        artist = get_metadata(track, 'artist', 'Unknown')
         title_rus = contains_cyrillic(title)
         artist_rus = contains_cyrillic(artist)
         image_path = extract_album_cover(track)

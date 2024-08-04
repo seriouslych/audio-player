@@ -203,9 +203,9 @@ def main(page: ft.Page):
             page.update()
 
     def file_alert_dialog_open(e: ft.ControlEvent, file_alert_dialog):
-        e.control.page.dialog = file_alert_dialog
+        page.overlay.append(file_alert_dialog)
         file_alert_dialog.open = True
-        e.control.page.update()
+        page.update()
 
     def open_drawer(e):
         drawer.open = True
@@ -222,6 +222,8 @@ def main(page: ft.Page):
         selected_index = drawer.selected_index
         if selected_index == 1 and file or track_queue:
             page.go("/tracks")
+        elif selected_index == 2:
+            pass
         else:
             page.go("/")
             file_alert_dialog = ft.AlertDialog(
@@ -235,9 +237,9 @@ def main(page: ft.Page):
         close_drawer()
 
     def info(e):
-        e.control.page.dialog = dlg_info
+        page.overlay.append(dlg_info)
         dlg_info.open = True
-        e.control.page.update()
+        page.update()
 
     def open_directory_picker(e):
         directory_picker = ft.FilePicker(on_result=select_directory)
@@ -269,7 +271,7 @@ def main(page: ft.Page):
     dlg_info = ft.AlertDialog(
         modal=False,
         title=ft.Text("About Audio Player"),
-        content=ft.Text("Audio Player 4.1.0 - 04.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
+        content=ft.Text("Audio Player 4.1.1 - 04.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
     )
 
     slider = ft.Slider(
@@ -331,11 +333,11 @@ def main(page: ft.Page):
         controls=[
             ft.NavigationDrawerDestination(
                 icon=ft.icons.PLAY_ARROW,
-                label="Now playing",
+                label="Now Playing",
             ),
             ft.NavigationDrawerDestination(
                 icon_content=ft.Icon(ft.icons.MUSIC_NOTE),
-                label="Track list",
+                label="Track List",
             ),
             ft.Divider(thickness=2),
             ft.NavigationDrawerDestination(
