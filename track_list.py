@@ -1,6 +1,6 @@
 import flet as ft
 
-from utils import get_filename, get_metadata, extract_album_cover
+from utils import get_filename, get_metadata, extract_album_cover, contains_cyrillic
 
 class metaData:
     def __init__(self, title: str, cover, artist: str):
@@ -9,7 +9,7 @@ class metaData:
         self.cover = cover
 
 class trackList:
-    def __init__(self, number: int, md: metaData, on_click):
+    def __init__(self, number: int, md: metaData, title_rus, artist_rus, on_click):
         self.number = ft.Text(value=str(number), size=20)
         self.metadata = ft.Column(
             [
@@ -21,16 +21,22 @@ class trackList:
         self.cover = md.cover
         self.on_click = on_click
 
+        if title_rus:
+            self.metadata.controls[0].font_family = "Montserrat"
+        if artist_rus:
+            self.metadata.controls[1].font_family = "Montserrat"
+
     def trackRow(self):
         track_row = ft.Container(
             content=ft.Row(
                     vertical_alignment=ft.CrossAxisAlignment.START,
                     alignment=ft.MainAxisAlignment.START,
-                    spacing=15,
+                    spacing=25,
+                    tight=True,
                     controls=[
                         self.number,
-                        self.metadata,
-                        self.cover
+                        self.cover,
+                        self.metadata
                     ],
                 ),
             on_click=self.on_click,
@@ -142,17 +148,19 @@ def tracks(page: ft.Page, track_queue, color, change_track_by_index):
     for index, track in enumerate(track_queue):
         title = get_metadata(track, 'title', get_filename(track))
         artist = get_metadata(track, 'artist', 'Неизвестно')
+        title_rus = contains_cyrillic(title)
+        artist_rus = contains_cyrillic(artist)
         image_path = extract_album_cover(track)
         cover = ft.Container(content=ft.Image(src=image_path), width=60, height=60) if image_path else ft.Container(ft.Icon(icon=ft.icons.AUDIO_FILE), width=60, height=60)
 
         md = metaData(title, cover, artist)
-        tl = trackList(index + 1, md, on_click=lambda e, idx=index: track_load(e, idx))
+        tl = trackList(index + 1, md, title_rus, artist_rus, on_click=lambda e, idx=index: track_load(e, idx))
         track_controls.append(tl.trackRow())
 
     track_list_view = ft.ListView(
         controls=track_controls,
         expand=True,
-        spacing=10
+        spacing=10,
     )
 
     container = ft.Container(

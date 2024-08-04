@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 import eyed3
+import re
 from mutagen.mp3 import MP3
 from mutagen.easyid3 import EasyID3
 
@@ -29,6 +30,10 @@ def get_metadata(src, tag, default_value):
         return default_value
     
     return audio.get(tag, [default_value])[0]
+
+def contains_cyrillic(text):
+    pattern = re.compile('[\u0400-\u04FF]')
+    return bool(pattern.search(text))
 
 def extract_album_cover(src):
     audiofile = eyed3.load(src)

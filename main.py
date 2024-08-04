@@ -1,39 +1,49 @@
 import flet as ft
 
-from utils import milliseconds_to_time, extract_album_cover, get_filename, get_metadata, scan_directory_for_audio_files, get_dominant_color
+from utils import milliseconds_to_time, extract_album_cover, get_filename, get_metadata, scan_directory_for_audio_files, get_dominant_color, contains_cyrillic
 import track_list
 import rpc
 
 def main(page: ft.Page):
-    global playing, paused, src, file, duration, formatted_duration, formatted_time, audio1, released, track_queue, color, current_track_index
-
     page.title = "Audio Player"
 
-    src = ''
+    page.fonts = {
+        "Poppins": "fonts/Poppins-Regular.ttf",
+        "Montserrat": "fonts/Montserrat-Regular.ttf"
+    }
+
+    page.theme = ft.Theme(font_family="Poppins")
+
     playing = False
     paused = False
-    released = False
+    src = ''
     file = False
-    audio1 = None
-    color = None
-    track_queue = []
-    current_track_index = 0
+    title_rus = False
+    artist_rus = False
     duration = 0
     formatted_duration = "00:00"
     formatted_time = "00:00"
+    audio1 = None
+    released = False
+    track_queue = []
+    color = None
+    current_track_index = 0
 
     def open_file(e: ft.FilePickerResultEvent):
-        global src, file, audio1, paused, playing, released, title, artist, image_path
+        nonlocal src, file
         if e.files or e.path:
             src = e.files[0].path
             file = True
             load_track(src)
 
     def load_track(src):
-        global audio1, paused, playing, released, title, artist, image_path, current_track_index, color
+        nonlocal audio1, paused, playing, released, current_track_index, color, title_rus, artist_rus
         filename = get_filename(src)
         title = get_metadata(src, 'title', filename)
         artist = get_metadata(src, 'artist', 'Неизвестно')
+
+        title_rus = contains_cyrillic(title)
+        artist_rus = contains_cyrillic(artist)
 
         if audio1 is None:
             audio1 = ft.Audio(
@@ -63,15 +73,21 @@ def main(page: ft.Page):
             appbar.bgcolor = color
             appbar.update()
 
+        if title_rus:
+            song_metadata.controls[0].font_family = "Montserrat"
+        if artist_rus:
+            song_metadata.controls[2].font_family = "Montserrat"
+        
         song_metadata.controls[0].value = artist
         song_metadata.controls[2].value = title
+
         cover.update()
         song_metadata.update()
         audio1.update()
 
         playing = False
         paused = False
-        
+
         playback_button.icon = ft.icons.PLAY_ARROW
         playback_button.on_click = audio_play
         playback_button.update()
@@ -79,8 +95,8 @@ def main(page: ft.Page):
         rpc.update_discord_rpc(title, artist, image_name)
 
     def audio_play(e):
-        global playing, paused, title, artist, track_queue
-        if not playing and file or track_queue:
+        nonlocal playing, paused
+        if file or track_queue:
             audio1.play()
             playing = True
             paused = False
@@ -89,7 +105,7 @@ def main(page: ft.Page):
             playback_button.update()
 
     def audio_pause(e):
-        global playing, paused
+        nonlocal playing, paused
         if playing:
             audio1.pause()
             playing = False
@@ -99,7 +115,7 @@ def main(page: ft.Page):
             playback_button.update()
 
     def audio_resume(e):
-        global playing, paused
+        nonlocal playing, paused
         if not playing and paused:
             audio1.resume()
             playing = True
@@ -109,23 +125,23 @@ def main(page: ft.Page):
             playback_button.update()
 
     def previous_track(e):
-        global current_track_index
+        nonlocal current_track_index
         if current_track_index > 0:
             current_track_index -= 1
             load_track(track_queue[current_track_index])
             audio_play(None)
 
     def next_track(e):
-        global current_track_index
+        nonlocal current_track_index
         if current_track_index < len(track_queue) - 1:
-            current_track_index += 1
+            current_track_index += 1    
             load_track(track_queue[current_track_index])
             audio_play(None)
         else:
-            audio_pause(None)
+            audio_pause()
 
     def change_track_by_index(index):
-        global current_track_index, playing, paused
+        nonlocal current_track_index, playing, paused
         if 0 <= index < len(track_queue) and index != current_track_index:
             current_track_index = index
             load_track(track_queue[index])
@@ -137,7 +153,7 @@ def main(page: ft.Page):
         audio1.update()
 
     def on_position_changed(e):
-        global formatted_time, formatted_duration, discord_rpc
+        nonlocal formatted_time, formatted_duration
         current_position = int(e.data)
         formatted_time = milliseconds_to_time(current_position)
         position = (current_position / duration) * 100
@@ -145,12 +161,13 @@ def main(page: ft.Page):
         update_seek_slider(position)
 
     def on_duration_changed(e):
-        global duration, formatted_duration
+        nonlocal duration, formatted_duration
         duration = int(e.data)
         formatted_duration = milliseconds_to_time(duration)
 
     def on_state_changed(e):
-        global track_queue
+        print(e.data)
+
         if e.data == "completed":
             if track_queue:
                 next_track(e)
@@ -162,7 +179,6 @@ def main(page: ft.Page):
         slider.update()
 
     def set_audio_position(e):
-        global duration
         position = (e.control.value / 100) * duration
         int_position = int(position)
         audio1.seek(int_position)
@@ -175,31 +191,30 @@ def main(page: ft.Page):
         t2.update()
 
     def open_dlg(e):
-        e.control.page.dialog = dlg_modal
+        page.overlay.append(dlg_modal)
         dlg_modal.open = True
-        e.control.page.update()
+        page.update()
 
     def handle_close(e):
         dlg_modal.open = False
-        if e.control.text == "Да":
-            page.window_destroy()
+        if e.control.text == "Yes":
+            page.window.destroy()
         else:
             page.update()
-    
+
     def file_alert_dialog_open(e: ft.ControlEvent, file_alert_dialog):
         e.control.page.dialog = file_alert_dialog
         file_alert_dialog.open = True
         e.control.page.update()
-        
-    
+
     def open_drawer(e):
         drawer.open = True
         page.update()
-        
+
     def close_drawer():
         drawer.open = False
         page.update()
-    
+
     def handle_drawer_dismissal(e):
         pass
 
@@ -211,15 +226,14 @@ def main(page: ft.Page):
             page.go("/")
             file_alert_dialog = ft.AlertDialog(
                 modal=False,
-                title=ft.Text("Переход к списку треков"),
-                content=ft.Text("Вы должны выбрать файл или директорию!")
+                title=ft.Text("Track list"),
+                content=ft.Text("You need to load a file or a directory!")
             )
             file_alert_dialog_open(e, file_alert_dialog)
-            
+
         drawer.selected_index = 0
         close_drawer()
-        
-            
+
     def info(e):
         e.control.page.dialog = dlg_info
         dlg_info.open = True
@@ -229,11 +243,11 @@ def main(page: ft.Page):
         directory_picker = ft.FilePicker(on_result=select_directory)
         page.overlay.append(directory_picker)
         page.update()
-        
+
         directory_picker.get_directory_path()
 
     def select_directory(e: ft.FilePickerResultEvent):
-        global track_queue, current_track_index
+        nonlocal track_queue, current_track_index
         if e.path:
             directory = e.path
             track_queue = scan_directory_for_audio_files(directory)
@@ -243,19 +257,19 @@ def main(page: ft.Page):
 
     dlg_modal = ft.AlertDialog(
         modal=True,
-        title=ft.Text("Выход"),
-        content=ft.Text("Вы точно хотите выйти?"),
+        title=ft.Text("Exit"),
+        content=ft.Text("Are you sure you want to exit?"),
         actions=[
-            ft.TextButton("Да", on_click=handle_close),
-            ft.TextButton("Нет", on_click=handle_close),
+            ft.TextButton("Yes", on_click=handle_close),
+            ft.TextButton("No", on_click=handle_close),
         ],
         actions_alignment=ft.MainAxisAlignment.END,
     )
-    
+
     dlg_info = ft.AlertDialog(
         modal=False,
-        title=ft.Text("О Audio Player"),
-        content=ft.Text("Audio Player 4.0.0 - 01.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
+        title=ft.Text("About Audio Player"),
+        content=ft.Text("Audio Player 4.1.0 - 04.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
     )
 
     slider = ft.Slider(
@@ -305,11 +319,11 @@ def main(page: ft.Page):
 
     song_metadata = ft.Row(
         [
-            ft.Text(value="Неизвестно", size=20), ft.Text(value="-", size=20), ft.Text(value="Неизвестно", size=20)
+            ft.Text(value="Unknown", size=20), ft.Text(value="-", size=20), ft.Text(value="Unknown", size=20)
         ],
         alignment=ft.MainAxisAlignment.CENTER
     )
-    
+
     drawer = ft.NavigationDrawer(
         on_dismiss=handle_drawer_dismissal,
         on_change=handle_drawer_change,
@@ -317,20 +331,20 @@ def main(page: ft.Page):
         controls=[
             ft.NavigationDrawerDestination(
                 icon=ft.icons.PLAY_ARROW,
-                label="Сейчас играет",
+                label="Now playing",
             ),
             ft.NavigationDrawerDestination(
                 icon_content=ft.Icon(ft.icons.MUSIC_NOTE),
-                label="Треки",
+                label="Track list",
             ),
             ft.Divider(thickness=2),
             ft.NavigationDrawerDestination(
                 icon=ft.icons.SETTINGS,
-                label="Настройки"
+                label="Settings"
             ),
         ],
     )
-    
+
     appbar = ft.AppBar(
         leading=ft.IconButton(ft.icons.MENU_ROUNDED, on_click=open_drawer),
         leading_width=40,
@@ -344,9 +358,9 @@ def main(page: ft.Page):
             )),
             ft.PopupMenuButton(
                 items=[
-                    ft.PopupMenuItem(text="О программе...", on_click=info),
+                    ft.PopupMenuItem(text="About...", on_click=info),
                     ft.PopupMenuItem(
-                        text="Выход", on_click=open_dlg
+                        text="Exit", on_click=open_dlg
                     ),
                 ]
             ),
@@ -383,7 +397,7 @@ def main(page: ft.Page):
                 )
             )
             page.update()
-            
+
         elif page.route == "/tracks":
             track_list.tracks(page, track_queue, color, change_track_by_index=change_track_by_index)
             page.update()
@@ -397,4 +411,4 @@ def main(page: ft.Page):
     page.on_view_pop = view_pop
     page.go(page.route)
 
-ft.app(target=main)
+ft.app(target=main, assets_dir='assets')
