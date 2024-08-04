@@ -11,7 +11,7 @@
 </p>
 <hr>
 <p align="center">
-  <img src="https://i.ibb.co/jMXBJ7c/screenshot.png" width="390" height="230" alt="screenshot"/>
+  <img src="https://github.com/seriouslych/audio-player/blob/main/assets/screenshot.png" width="700" height="420" alt="screenshot"/>
 </p>
 
 ## Description
