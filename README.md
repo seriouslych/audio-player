@@ -4,6 +4,10 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-%2302569B.svg?&logo=Flutter&logoColor=white" alt="Flutter"/>
   <img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff" alt="Python"/>
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT"/> 
+  <img src="https://badgen.net/badge/icon/windows?icon=windows&label" alt="Windows"/> 
+  <img src="https://badgen.net/badge/Open%20Source%20%3F/Yes%21/blue?icon=github" alt="Open Source"/>
+
 </p>
 <hr>
 <p align="center">
