@@ -1,10 +1,13 @@
 import flet as ft
+import threading
+import time
+import sys
 
 from utils import milliseconds_to_time, extract_album_cover, get_filename, get_metadata, scan_directory_for_audio_files, get_dominant_color, contains_cyrillic
 import track_list
 import rpc
 
-def main(page: ft.Page):
+def main(page: ft.Page, initial_file=None):
     page.title = "Audio Player"
 
     page.fonts = {
@@ -36,8 +39,14 @@ def main(page: ft.Page):
             file = True
             load_track(src)
 
+    def open_args_file(file_name):
+        nonlocal src, file
+        src = file_name
+        file = True
+        load_track(src)
+
     def load_track(src):
-        nonlocal audio1, paused, playing, released, current_track_index, color, title_rus, artist_rus
+        nonlocal audio1, paused, playing, released, current_track_index, color, title_rus, artist_rus, formatted_duration
         filename = get_filename(src)
         title = get_metadata(src, 'title', filename)
         artist = get_metadata(src, 'artist', 'Неизвестно')
@@ -124,19 +133,23 @@ def main(page: ft.Page):
             playback_button.on_click = audio_pause
             playback_button.update()
 
+    def play_after_delay():
+        time.sleep(0.1)  # Adjust the delay as needed
+        audio_play(None)
+
     def previous_track(e):
         nonlocal current_track_index
         if current_track_index > 0:
             current_track_index -= 1
             load_track(track_queue[current_track_index])
-            audio_play(None)
+            threading.Thread(target=play_after_delay).start()
 
     def next_track(e):
         nonlocal current_track_index
         if current_track_index < len(track_queue) - 1:
             current_track_index += 1    
             load_track(track_queue[current_track_index])
-            audio_play(None)
+            threading.Thread(target=play_after_delay).start()
         else:
             audio_pause()
 
@@ -145,7 +158,7 @@ def main(page: ft.Page):
         if 0 <= index < len(track_queue) and index != current_track_index:
             current_track_index = index
             load_track(track_queue[index])
-            audio_play(None)
+            threading.Thread(target=play_after_delay).start()
 
     def slider_changed(e):
         volume = e.control.value / 100
@@ -271,7 +284,7 @@ def main(page: ft.Page):
     dlg_info = ft.AlertDialog(
         modal=False,
         title=ft.Text("About Audio Player"),
-        content=ft.Text("Audio Player 4.1.1 - 04.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
+        content=ft.Text("Audio Player 5.0.0 - 10.08.2024\nMIT License\nCopyright (c) 2024 Alexander Seriously")
     )
 
     slider = ft.Slider(
@@ -401,7 +414,7 @@ def main(page: ft.Page):
             page.update()
 
         elif page.route == "/tracks":
-            track_list.tracks(page, track_queue, color, change_track_by_index=change_track_by_index)
+            track_list.tracks(page, track_queue, current_track_index, color, change_track_by_index=change_track_by_index)
             page.update()
 
     def view_pop(view):
@@ -413,4 +426,9 @@ def main(page: ft.Page):
     page.on_view_pop = view_pop
     page.go(page.route)
 
-ft.app(target=main, assets_dir='assets')
+    if initial_file:
+        open_args_file(initial_file)
+
+if __name__ == "__main__":
+    initial_file = sys.argv[1] if len(sys.argv) > 1 else None
+    ft.app(target=lambda page: main(page, initial_file=initial_file), assets_dir='assets')

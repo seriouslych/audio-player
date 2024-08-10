@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+cache/
 
 test.py
 test2.py

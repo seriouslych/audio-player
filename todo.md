@@ -2,6 +2,12 @@
 
 - Сделать настройки
 
+- Сделать кэширования обложек в трек листе (а то это капец, загрузка очень долгая если много треков)
+
+- Как нибудь добавить поиск в странице трек листа
+
+- Показ трека который сейчас играет на странице трек листа
+
 - Пофиксить мелкие баги, если имеются/будут имется
 
 - Сделать установщик чтобы он делал изминения в реестре
@@ -19,6 +25,12 @@
 
     [HKEY_CLASSES_ROOT\AudioPlayer.MP3]
     @="Audio-Player type audio file"
+
+    [HKEY_CLASSES_ROOT\*\shell\AudioPlayerOpenWith]
+    @="Открыть с помощью Audio-Player"
+
+    [HKEY_CLASSES_ROOT\*\shell\AudioPlayerOpenWith\command]
+    @="\"C:\\Path\\To\\Audio-Player.exe\" \"%1\""
 
     [HKEY_CLASSES_ROOT\AudioPlayer.MP3\shell\open\command]
     @="\"C:\\Path\\To\\Audio-Player.exe\" \"%1\""
